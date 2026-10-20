@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multiplayer Racing</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>🏎️ Car Racing</h1>
+
+<div class="panel">
+    <input id="roomCode" placeholder="Room code" maxlength="5">
+    <button id="create">Create Room</button>
+    <button id="join">Join Room</button>
+    <p id="status">Connecting...</p>
+    <p>Players: <span id="count">0</span>/4</p>
+</div>
+
+<div id="road">
+    <div class="line"></div>
+    <div id="cars"></div>
+</div>
+
+<div class="controls">
+    <button id="left">⬅️</button>
+    <button id="right">➡️</button>
+    <button id="up">⬆️</button>
+    <button id="down">⬇️</button>
+</div>
+
+<p>Apne doston ko room code do!</p>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="game.js"></script>
+
+</body>
+</html>
