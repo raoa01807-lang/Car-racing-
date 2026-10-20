@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Multiplayer Mini Militia 1v1</title>
+    <style>
+        body {
+            margin: 0;
+            background: #111;
+            color: white;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        canvas {
+            background: #4a752c;
+            border: 4px solid #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        .instructions {
+            margin-top: 10px;
+            font-size: 14px;
+            text-align: center;
+            background: #222;
+            padding: 8px 15px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas" width="800" height="450"></canvas>
+    
+    <div class="instructions" id="infoText">Connecting to server...</div>
+
+    <!-- Socket.io client library -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const infoText = document.getElementById("infoText");
+
+        let myRole = null;
+        let playersList = {};
+        let bullets = [];
+        const keys = {};
+
+        window.addEventListener("keydown", (e) => keys[e.code] = true);
+        window.addEventListener("keyup", (e) => keys[e.code] = false);
+
+        socket.on('assigned', (role) => {
+            myRole = role;
+            infoText.innerHTML = `You are <strong>Player (${role.toUpperCase()})</strong>. Use W/A/S/D to move/jetpack, Space to shoot.`;
+        });
+
+        socket.on('full', () => {
+            infoText.innerText = "Room is full! Only 2 players allowed.";
+        });
+
+        socket.on('currentPlayers', (serverPlayers) => {
+            playersList = serverPlayers;
+        });
+
+        socket.on('enemyShoot', (b) => {
+            bullets.push(b);
+        });
+
+        // Local Player Object
+        let myData = { x: 100, y: 300, vx: 0, vy: 0, speed: 3, gravity: 0.3, jumpPower: -6, health: 100, fuel: 100, facing: 1, width: 24, height: 36, isDead: false };
+
+        function updateMyPlayer() {
+            if (myRole && playersList[socket.id]) {
+                let p = playersList[socket.id];
+                myData.x = p.x;
+                myData.y = p.y;
+                myData.health = p.health;
+                myData.fuel = p.fuel;
+            }
+
+            if (myData.isDead) return;
+
+            // Controls (A/D to move, W for jetpack)
+            if (keys["KeyA"]) {
+                myData.vx = -myData.speed;
+                myData.facing = -1;
+            } else if (keys["KeyD"]) {
+                myData.vx = myData.speed;
+                myData.facing = 1;
+            } else {
+                myData.vx *= 0.8;
+            }
+
+            if (keys["KeyW"] && myData.fuel > 0) {
+                myData.vy += myData.jumpPower * 0.35;
+                myData.fuel = Math.max(0, myData.fuel - 0.8);
+            } else {
+                myData.vy += myData.gravity;
+                if (myData.y >= 380 && myData.fuel < 100) {
+                    myData.fuel = Math.min(100, myData.fuel + 0.4);
+                }
+            }
+
+            myData.x += myData.vx;
+            myData.y += myData.vy;
+
+            if (myData.y > 380) {
+                myData.y = 380;
+                myData.vy = 0;
+            }
+            if (myData.x < 0) myData.x = 0;
+            if (myData.x > canvas.width - myData.width) myData.x = canvas.width - myData.width;
+
+            // Send position to server
+            if (myRole) {
+                socket.emit('playerData', {
+                    x: myData.x,
+                    y: myData.y,
+                    health: myData.health,
+                    fuel: myData.fuel,
+                    facing: myData.facing
+                });
+            }
+        }
+
+        let lastShot = 0;
+        function handleShooting() {
+            let now = Date.now();
+            if (keys["Space"] && now - lastShot > 250 && !myData.isDead) {
+                let bx = myData.facing === 1 ? myData.x + myData.width + 5 : myData.x - 10;
+                let by = myData.y + 14;
+                let bvx = myData.facing * 10;
+                
+                bullets.push({ x: bx, y: by, vx: bvx, active: true });
+                socket.emit('shoot', { x: bx, y: by, vx: bvx, active: true });
+                lastShot = now;
+            }
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Ground
+            ctx.fillStyle = "#35521e";
+            ctx.fillRect(0, 416, canvas.width, 34);
+
+            updateMyPlayer();
+            handleShooting();
+
+            // Update & Draw Bullets
+            bullets.forEach(b => {
+                b.x += b.vx;
+                if (b.x < 0 || b.x > canvas.width) b.active = false;
+            });
+            bullets = bullets.filter(b => b.active);
+
+            bullets.forEach(b => {
+                ctx.fillStyle = "#ffcc00";
+                ctx.fillRect(b.x, b.y, 6, 3);
+            });
+
+            // Draw all connected players
+            for (let id in playersList) {
+                let p = playersList[id];
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 24, 36);
+
+                // Helmet
+                ctx.fillStyle = "#333";
+                ctx.fillRect(p.x + (p.facing === 1 ? 8 : -2), p.y - 8, 16, 14);
+
+                // Gun
+                let gunX = p.facing === 1 ? p.x + 24 : p.x - 12;
+                ctx.fillRect(gunX, p.y + 12, 14, 6);
+
+                // UI Health bar
+                ctx.fillStyle = "red";
+                ctx.fillRect(p.x - 10, p.y - 22, 44, 6);
+                ctx.fillStyle = "lime";
+                ctx.fillRect(p.x - 10, p.y - 22, (p.health / 100) * 44, 6);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
