@@ -60,7 +60,7 @@ io.on("connection", socket => {
             });
         }
 
-        if (room.size >= 4) {
+        if (room.size >= 2) {
             return callback({
                 ok: false,
                 message: "Room full hai!"
