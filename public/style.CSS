@@ -1,0 +1,77 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #10151b;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+h1 {
+    color: #00ff99;
+}
+
+.panel {
+    padding: 10px;
+}
+
+input, button {
+    padding: 12px;
+    margin: 4px;
+    border: 0;
+    border-radius: 8px;
+}
+
+button {
+    background: #00cc88;
+    font-weight: bold;
+}
+
+#status {
+    color: #ffd447;
+}
+
+#road {
+    width: 280px;
+    height: 400px;
+    max-width: 95vw;
+    margin: 10px auto;
+    position: relative;
+    overflow: hidden;
+    background: #42474d;
+    border-left: 8px solid white;
+    border-right: 8px solid white;
+}
+
+.line {
+    position: absolute;
+    left: 50%;
+    height: 100%;
+    border-left: 4px dashed white;
+}
+
+.car {
+    width: 40px;
+    height: 65px;
+    border: 3px solid white;
+    border-radius: 9px;
+    position: absolute;
+    transition: left 0.06s, top 0.06s;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.controls button {
+    width: 65px;
+    height: 55px;
+    font-size: 22px;
+    touch-action: none;
+}
